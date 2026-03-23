@@ -1,0 +1,23 @@
+name: AEGIS Governance Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  governance-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pyonkichi369/aegis-oss@v1
+        with:
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          category: TACTICAL
+          fail-on: BLOCK

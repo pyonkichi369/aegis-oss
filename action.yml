@@ -1,0 +1,201 @@
+name: 'AEGIS Governance Review'
+description: 'AI governance review for pull requests — structured boardroom debate with red team challenge'
+author: 'AEGIS Contributors'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  api-key:
+    description: 'Anthropic or OpenAI API key'
+    required: true
+  provider:
+    description: 'LLM provider (anthropic or openai)'
+    required: false
+    default: 'anthropic'
+  model:
+    description: 'Model to use'
+    required: false
+    default: 'claude-sonnet-4-20250514'
+  category:
+    description: 'Decision category (OPERATIONAL, TACTICAL, STRATEGIC, CRITICAL)'
+    required: false
+    default: 'TACTICAL'
+  custom-rules:
+    description: 'Path to custom rules YAML file'
+    required: false
+  fail-on:
+    description: 'Fail the check on verdict (BLOCK, ESCALATE, FLAG, never)'
+    required: false
+    default: 'BLOCK'
+
+outputs:
+  verdict:
+    description: 'Overall governance verdict'
+    value: ${{ steps.review.outputs.verdict }}
+  confidence:
+    description: 'Decision confidence score'
+    value: ${{ steps.review.outputs.confidence }}
+  summary:
+    description: 'CEO synthesis summary'
+    value: ${{ steps.review.outputs.summary }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install AEGIS
+      shell: bash
+      run: |
+        pip install aegis-gov 2>/dev/null || pip install -e "${{ github.action_path }}"
+
+    - name: Get PR diff
+      shell: bash
+      id: diff
+      run: |
+        if [ -n "${{ github.event.pull_request.number }}" ]; then
+          DIFF=$(gh pr diff "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" 2>/dev/null || git diff "origin/${{ github.event.pull_request.base.ref }}...HEAD")
+        else
+          DIFF=$(git diff HEAD~1)
+        fi
+        # Truncate to keep within LLM context limits
+        DIFF=$(echo "$DIFF" | head -100)
+        EOF_MARKER="AEGIS_EOF_$(date +%s)"
+        echo "diff<<${EOF_MARKER}" >> "$GITHUB_OUTPUT"
+        echo "$DIFF" >> "$GITHUB_OUTPUT"
+        echo "${EOF_MARKER}" >> "$GITHUB_OUTPUT"
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Run AEGIS Review
+      shell: bash
+      id: review
+      run: |
+        python3 << 'PYTHON_EOF'
+        import os
+        import sys
+        import json
+        import traceback
+
+        action_path = os.environ.get("ACTION_PATH", ".")
+        sys.path.insert(0, action_path)
+
+        from aegis_gov.council.boardroom import Boardroom, BoardroomConfig
+        from aegis_gov.council.rule_engine import RuleEngine
+
+        provider = os.environ.get("INPUT_PROVIDER", "anthropic")
+        api_key = os.environ.get("INPUT_API_KEY", "")
+        model = os.environ.get("INPUT_MODEL", "claude-sonnet-4-20250514")
+        category = os.environ.get("INPUT_CATEGORY", "TACTICAL")
+        custom_rules = os.environ.get("INPUT_CUSTOM_RULES", "")
+        fail_on = os.environ.get("INPUT_FAIL_ON", "BLOCK")
+
+        pr_title = os.environ.get("PR_TITLE", "Pull Request Review")
+        pr_body = (os.environ.get("PR_BODY", "") or "")[:1000]
+        diff_preview = (os.environ.get("PR_DIFF", "") or "")[:2000]
+
+        github_output = os.environ.get("GITHUB_OUTPUT", "")
+        github_summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
+
+
+        def set_output(name, value):
+            if github_output:
+                with open(github_output, "a") as f:
+                    f.write(f"{name}={value}\n")
+
+
+        config = BoardroomConfig(
+            api_key=api_key,
+            model=model,
+            provider=provider,
+            max_debate_rounds=1,
+        )
+        boardroom = Boardroom(config)
+
+        topic = f"Review PR: {pr_title}"
+        context = {
+            "pr_title": pr_title,
+            "pr_body": pr_body,
+            "diff_preview": diff_preview,
+            "category": category,
+        }
+
+        try:
+            result = boardroom.convene(
+                topic=topic,
+                category=category,
+                context=context,
+            )
+
+            synthesis = result.synthesis if result.synthesis else "Review completed"
+            confidence = result.confidence if result.confidence else 0.8
+
+            # Evaluate with rule engine
+            engine = RuleEngine(custom_rules if custom_rules else None)
+            rule_result = engine.evaluate(
+                agent="PR",
+                action="merge",
+                context={
+                    "confidence": confidence,
+                    "environment": "production" if category == "CRITICAL" else "staging",
+                    "category": category,
+                },
+            )
+            verdict = rule_result.final_verdict.name  # PASS, FLAG, BLOCK, ESCALATE_TO_HUMAN, HALT
+
+            set_output("verdict", verdict)
+            set_output("confidence", str(confidence))
+            set_output("summary", synthesis[:500].replace("\n", " "))
+
+            # Write GitHub Step Summary
+            if github_summary:
+                with open(github_summary, "a") as f:
+                    f.write("## AEGIS Governance Review\n\n")
+                    f.write(f"**Verdict**: `{verdict}`\n\n")
+                    f.write(f"**Confidence**: {confidence}\n\n")
+                    f.write(f"**Category**: {category}\n\n")
+                    f.write(f"### CEO Synthesis\n\n{synthesis}\n\n")
+                    if rule_result.results:
+                        f.write("### Rule Engine Results\n\n")
+                        f.write("| Rule | Verdict | Message |\n")
+                        f.write("|------|---------|--------|\n")
+                        for r in rule_result.results:
+                            f.write(f"| {r.rule_name} | `{r.verdict.name}` | {r.message} |\n")
+                        f.write("\n")
+
+            # Determine failure
+            verdict_map = {
+                "BLOCK": ["BLOCK", "HALT"],
+                "ESCALATE": ["ESCALATE_TO_HUMAN", "HALT"],
+                "FLAG": ["FLAG", "BLOCK", "ESCALATE_TO_HUMAN", "HALT"],
+            }
+            fail_verdicts = verdict_map.get(fail_on, [])
+
+            if fail_on != "never" and verdict in fail_verdicts:
+                print(f"::error::AEGIS governance review verdict: {verdict}")
+                sys.exit(1)
+            else:
+                print(f"AEGIS governance review passed with verdict: {verdict}")
+
+        except Exception as e:
+            traceback.print_exc()
+            print(f"::warning::AEGIS review failed: {e}")
+            set_output("verdict", "ERROR")
+            set_output("confidence", "0")
+            set_output("summary", f"Review failed: {e}")
+        PYTHON_EOF
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_API_KEY: ${{ inputs.api-key }}
+        INPUT_MODEL: ${{ inputs.model }}
+        INPUT_CATEGORY: ${{ inputs.category }}
+        INPUT_CUSTOM_RULES: ${{ inputs.custom-rules }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_BODY: ${{ github.event.pull_request.body }}
+        PR_DIFF: ${{ steps.diff.outputs.diff }}
