@@ -8,13 +8,17 @@ Run:
     uvicorn aegis_gov.api:app --reload
 """
 
+import asyncio
 import hmac
+import json
 import logging
 import os
+import queue
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from . import __version__
@@ -160,6 +164,101 @@ def run_boardroom(req: BoardroomRequest):
     except Exception as e:
         logger.error(f"Boardroom failed: {e}")
         raise HTTPException(500, "Boardroom session failed")
+
+
+@app.post("/api/v1/boardroom/stream", dependencies=[Depends(verify_api_key)])
+async def stream_boardroom(req: BoardroomRequest):
+    """Stream boardroom meeting progress via Server-Sent Events.
+
+    Each phase emits events as they happen, allowing clients to show
+    real-time progress. Event types:
+      - phase: phase_start/phase_complete notifications
+      - agent_response: individual agent contributions
+      - agent_error: agent failure notifications
+      - complete: final session result
+      - error: fatal error
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(400, "Set ANTHROPIC_API_KEY or OPENAI_API_KEY in environment")
+
+    # Sanitize inputs
+    sanitized_topic = sanitize_input(req.topic, max_length=2000, field_name="topic")
+    sanitized_context = sanitize_context(req.context, max_length=5000)
+
+    if not sanitized_topic:
+        raise HTTPException(422, "Topic cannot be empty after sanitization")
+
+    config = BoardroomConfig(
+        api_key=api_key,
+        model=req.model,
+        provider=req.provider,
+        synthesis_language=req.synthesis_language,
+        max_debate_rounds=req.max_debate_rounds,
+    )
+
+    async def event_generator():
+        event_queue: queue.Queue = queue.Queue()
+
+        def on_event(event: dict):
+            event_queue.put(event)
+
+        def _format_sse(event_type: str, data: dict) -> str:
+            return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+        boardroom = Boardroom(config=config)
+        loop = asyncio.get_event_loop()
+
+        # Run the synchronous convene in a thread so we don't block the event loop
+        future = loop.run_in_executor(
+            None,
+            lambda: boardroom.convene(
+                topic=sanitized_topic,
+                category=req.category,
+                context=sanitized_context,
+                on_event=on_event,
+            ),
+        )
+
+        # Poll the queue for events while convene runs in background
+        try:
+            while not future.done():
+                # Drain all available events
+                while True:
+                    try:
+                        event = event_queue.get_nowait()
+                        event_type = event.get("type", "phase")
+                        yield _format_sse(event_type, event)
+                    except queue.Empty:
+                        break
+                await asyncio.sleep(0.1)
+
+            # Drain remaining events after completion
+            while True:
+                try:
+                    event = event_queue.get_nowait()
+                    event_type = event.get("type", "phase")
+                    yield _format_sse(event_type, event)
+                except queue.Empty:
+                    break
+
+            # Get the result (or raise if it failed)
+            session = future.result()
+            yield _format_sse("complete", session.to_dict())
+
+        except Exception as e:
+            logger.error(f"Boardroom stream failed: {e}")
+            yield _format_sse("error", {"error": str(e)})
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/api/v1/review", dependencies=[Depends(verify_api_key)])

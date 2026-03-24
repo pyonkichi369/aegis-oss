@@ -172,6 +172,7 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
         topic: str,
         category: str = "TACTICAL",
         context: dict[str, Any] | None = None,
+        on_event: "callable | None" = None,
     ) -> BoardroomSession:
         """
         Run a full boardroom meeting.
@@ -180,10 +181,16 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
             topic: The decision or question to discuss
             category: CRITICAL | STRATEGIC | TACTICAL | OPERATIONAL
             context: Additional context for the discussion
+            on_event: Optional callback invoked at each phase milestone.
+                Receives a dict with keys: type, phase, and optional data.
 
         Returns:
             BoardroomSession with full meeting record
         """
+        def _emit(event_type: str, phase: str, **kwargs):
+            if on_event:
+                on_event({"type": event_type, "phase": phase, **kwargs})
+
         cat = DecisionCategory(category)
         session = BoardroomSession(topic=topic, category=cat)
         ctx_str = json.dumps(context or {}, indent=2)
@@ -191,6 +198,7 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
         logger.info(f"Boardroom convened: {topic} [{category}]")
 
         # Phase 1: CEO Opening
+        _emit("phase_start", "opening")
         ceo = next((a for a in self.roster if a.name == "CEO"), None)
         if ceo is None:
             raise ValueError("Roster must include an agent named 'CEO'. Add one or use the default roster.")
@@ -200,10 +208,13 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
             f"Topic: {topic}\nCategory: {category}\nContext: {ctx_str}\n\n"
             "Open the meeting: restate topic, classify importance, "
             "identify key stakeholders, set debate format.",
+            on_event=on_event,
         )
         session.phases.append({"phase": "opening", "content": opening})
+        _emit("phase_complete", "opening")
 
         # Phase 2: Executive Council
+        _emit("phase_start", "executive_council")
         executives = [a for a in self.roster if a.tier == "executive"]
         exec_input = self._run_phase(
             "Phase 2: Executive Council",
@@ -211,10 +222,13 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
             f"Topic: {topic}\nContext: {ctx_str}\n\n"
             "Present your perspective on this topic (2-3 sentences). "
             "Focus on your domain expertise.",
+            on_event=on_event,
         )
         session.phases.append({"phase": "executive_council", "content": exec_input})
+        _emit("phase_complete", "executive_council")
 
         # Phase 3: Advisory & Specialist Input
+        _emit("phase_start", "advisory")
         advisors = [a for a in self.roster if a.tier == "specialist"]
         advisory_input = self._run_phase(
             "Phase 3: Advisory Input",
@@ -222,11 +236,14 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
             f"Topic: {topic}\nContext: {ctx_str}\n"
             f"Executive perspectives:\n{exec_input[:2000]}\n\n"
             "Contribute your domain expertise (2-3 sentences).",
+            on_event=on_event,
         )
         session.phases.append({"phase": "advisory", "content": advisory_input})
+        _emit("phase_complete", "advisory")
 
         # Phase 4: Critical Review (Red Team)
         if self.config.require_red_team:
+            _emit("phase_start", "critical_review")
             red_team = [a for a in self.roster if a.tier == "red_team"]
             reviewers = [a for a in self.roster if a.tier == "reviewer"]
             critical = self._run_phase(
@@ -236,10 +253,13 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
                 f"Discussion so far:\n{exec_input[:1500]}\n{advisory_input[:1500]}\n\n"
                 "Challenge the emerging consensus. Find risks, gaps, and flaws. "
                 "You MUST challenge even if you agree.",
+                on_event=on_event,
             )
             session.phases.append({"phase": "critical_review", "content": critical})
+            _emit("phase_complete", "critical_review")
 
         # Phase 5: Open Debate (exclude CEO to avoid duplication with Phase 1)
+        _emit("phase_start", "debate")
         debate_agents = [a for a in self.roster if a.name != "CEO"]
         all_perspectives = "\n".join(
             p.get("content", "") for p in session.phases
@@ -251,10 +271,13 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
             f"All perspectives so far:\n{all_perspectives[:4000]}\n\n"
             "Respond to other agents' points. Flag agreements and disagreements. "
             "Red team must challenge at least one consensus point.",
+            on_event=on_event,
         )
         session.phases.append({"phase": "debate", "content": debate})
+        _emit("phase_complete", "debate")
 
         # Phase 6: CEO Synthesis
+        _emit("phase_start", "synthesis")
         synthesis_prompt = self._build_synthesis_prompt(topic, category, session, ctx_str)
         synthesis = self._call_llm(
             "You are AI_CEO synthesizing a boardroom meeting. "
@@ -287,10 +310,14 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
                 for i in range(int(count)):
                     session.votes.append(Vote(agent=f"agent_{position.value}_{i}", position=position))
 
+        _emit("phase_complete", "synthesis")
         logger.info(f"Boardroom concluded: {topic}")
         return session
 
-    def _run_phase(self, phase_name: str, agents: list[AgentRole], user_msg: str) -> str:
+    def _run_phase(
+        self, phase_name: str, agents: list[AgentRole], user_msg: str,
+        on_event: "callable | None" = None,
+    ) -> str:
         """Run a phase with multiple agents and collect responses."""
         responses = []
         for agent in agents:
@@ -299,9 +326,24 @@ Focus on evidence and frameworks, not opinions. Flag disagreements directly.
                 response = self._call_llm(system, user_msg)
                 responses.append(f"**{agent.name}** ({agent.role}):\n{response}")
                 logger.debug(f"  {agent.name}: responded")
+                if on_event:
+                    on_event({
+                        "type": "agent_response",
+                        "phase": phase_name,
+                        "agent": agent.name,
+                        "role": agent.role,
+                        "content": response,
+                    })
             except Exception as e:
                 logger.warning(f"  {agent.name}: failed — {e}")
                 responses.append(f"**{agent.name}**: [No response — {e}]")
+                if on_event:
+                    on_event({
+                        "type": "agent_error",
+                        "phase": phase_name,
+                        "agent": agent.name,
+                        "error": str(e),
+                    })
 
         return "\n\n---\n\n".join(responses)
 

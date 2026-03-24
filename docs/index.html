@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AEGIS — Governance-First Framework for AI Agent Systems</title>
+  <meta name="description" content="Your AI agents make decisions. Who governs them? Structured boardroom debates, mandatory red team review, and governance guardrails that actually enforce.">
+  <meta name="theme-color" content="#06080f">
+  <meta property="og:title" content="AEGIS — Governance-First AI Agent Framework">
+  <meta property="og:description" content="Structured boardroom debates. Mandatory red team. Governance guardrails that actually enforce.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://aegis-oss.vercel.app/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="https://aegis-oss.vercel.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:image" content="https://aegis-oss.vercel.app/og-image.png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M16 2L4 8v12l12 7 12-7V8L16 2z' stroke='%2300d4ff' stroke-width='2'/%3E%3Cpath d='M16 9l-6 3.5v7L16 23l6-3.5v-7L16 9z' fill='%2300d4ff' fill-opacity='0.15' stroke='%2300d4ff' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%2300d4ff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-void: #06080f;
+      --bg-base: #0a0e18;
+      --bg-surface: #111722;
+      --bg-elevated: #19202e;
+      --bg-panel: #1f2838;
+      --bg-code: #0d1117;
+      --accent: #00d4ff;
+      --accent-dim: rgba(0, 212, 255, 0.6);
+      --accent-glow: rgba(0, 212, 255, 0.25);
+      --accent-subtle: rgba(0, 212, 255, 0.08);
+      --accent2: #6366f1;
+      --accent2-glow: rgba(99, 102, 241, 0.25);
+      --text-primary: #e8ecf4;
+      --text-secondary: #8b95a8;
+      --text-muted: #4f5b6e;
+      --border: rgba(0, 212, 255, 0.06);
+      --border-hover: rgba(0, 212, 255, 0.2);
+      --border-subtle: rgba(255, 255, 255, 0.04);
+      --success: #00ff88;
+      --warning: #ffb800;
+      --danger: #ff3b3b;
+      --halt: #dc2626;
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --duration: 220ms;
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-pill: 9999px;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-void);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--accent); text-decoration: none; transition: color var(--duration) var(--ease); }
+    a:hover { color: var(--text-primary); }
+    img { max-width: 100%; height: auto; }
+
+    /* ── Grid Background ── */
+    .grid-bg {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-image:
+        linear-gradient(var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none; z-index: 0; opacity: 0.5;
+      overflow: hidden;
+    }
+
+    /* ── Utilities ── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    @media (max-width: 640px) { .container { padding: 0 16px; } }
+
+    .section { padding: 100px 0; position: relative; }
+    @media (max-width: 768px) { .section { padding: 64px 0; } }
+    @media (max-width: 640px) { br { display: none; } }
+
+    .section-label {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .section-label::before {
+      content: ''; width: 24px; height: 1px; background: var(--accent);
+    }
+
+    .section-title {
+      font-family: var(--font-display); font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: clamp(15px, 2vw, 18px); color: var(--text-secondary);
+      max-width: 600px; line-height: 1.7;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 6s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+
+    /* Fade-in */
+    .fade-in { opacity: 0; transform: translateY(28px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .fade-in-d1 { transition-delay: 0.1s; }
+    .fade-in-d2 { transition-delay: 0.2s; }
+    .fade-in-d3 { transition-delay: 0.3s; }
+    .fade-in-d4 { transition-delay: 0.4s; }
+
+    /* ── Navigation ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 0;
+      background: rgba(6, 8, 15, 0.7);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      transition: background var(--duration);
+    }
+    .nav.scrolled { background: rgba(6, 8, 15, 0.92); }
+
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1200px; margin: 0 auto; padding: 0 24px; gap: 16px;
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-size: 18px; font-weight: 800;
+      color: var(--text-primary); letter-spacing: 0.08em; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .nav-logo svg { width: 28px; height: 28px; flex-shrink: 0; }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 8px; list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      padding: 8px 14px; border-radius: var(--radius-pill);
+      transition: color var(--duration), background var(--duration);
+      white-space: nowrap;
+    }
+    .nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+
+    .nav-cta {
+      display: inline-flex !important; align-items: center; gap: 8px;
+      padding: 8px 18px !important; min-height: 38px;
+      background: var(--accent) !important; color: var(--bg-void) !important;
+      border-radius: var(--radius-pill) !important;
+      font-weight: 700 !important; font-size: 13px !important;
+      box-shadow: 0 0 20px var(--accent-glow);
+      transition: transform var(--duration), box-shadow var(--duration) !important;
+      flex-shrink: 0;
+    }
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 32px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.3) !important;
+      color: var(--bg-void) !important;
+    }
+    .nav-cta svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .nav-mobile-toggle {
+      display: none; background: none; border: 1px solid var(--border);
+      color: var(--text-primary); padding: 8px; cursor: pointer;
+      min-width: 44px; min-height: 44px; border-radius: var(--radius-sm);
+      align-items: center; justify-content: center;
+      transition: border-color var(--duration), background var(--duration);
+    }
+    .nav-mobile-toggle:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.03); }
+
+    @media (max-width: 768px) {
+      .nav-inner { padding: 0 16px; }
+      .nav-links {
+        display: none; flex-direction: column; align-items: stretch;
+        position: absolute; top: calc(100% + 1px); left: 0; right: 0;
+        background: rgba(6, 8, 15, 0.97);
+        backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+        padding: 16px; gap: 4px;
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 14px 16px; border-radius: var(--radius-md); font-size: 15px; }
+      .nav-cta { justify-content: center; margin-top: 8px; }
+      .nav-mobile-toggle { display: flex; }
+    }
+
+    /* ── Hero ── */
+    .hero { padding-top: 160px; padding-bottom: 100px; text-align: center; position: relative; overflow: hidden; }
+    @media (max-width: 768px) { .hero { padding-top: 120px; padding-bottom: 64px; } }
+
+    .hero-glow {
+      position: absolute; top: -300px; left: 50%; transform: translateX(-50%);
+      width: min(1000px, 200vw); height: 1000px;
+      background: radial-gradient(ellipse at center, rgba(0, 212, 255, 0.08) 0%, rgba(99, 102, 241, 0.04) 40%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-scanline {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+      animation: scanline 4s ease-in-out infinite;
+      pointer-events: none; opacity: 0.4;
+    }
+    @keyframes scanline {
+      0% { top: 0; opacity: 0; }
+      10% { opacity: 0.4; }
+      90% { opacity: 0.4; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 20px 6px 12px;
+      background: var(--accent-subtle); border: 1px solid rgba(0, 212, 255, 0.15);
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+      color: var(--accent); margin-bottom: 32px;
+    }
+
+    .hero-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success); animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--success); } 50% { opacity: 0.4; box-shadow: none; } }
+
+    .hero h1 {
+      font-family: var(--font-display); font-size: clamp(36px, 7vw, 76px);
+      font-weight: 800; letter-spacing: -0.04em; line-height: 1.02;
+      max-width: 900px; margin: 0 auto 24px;
+    }
+
+    .hero-sub {
+      font-size: clamp(15px, 2.2vw, 19px); color: var(--text-secondary);
+      max-width: 620px; margin: 0 auto 40px; line-height: 1.7;
+    }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; }
+    @media (max-width: 480px) { .hero-actions { flex-direction: column; align-items: stretch; } }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 24px; border-radius: var(--radius-md);
+      font-family: var(--font-body); font-size: 15px; font-weight: 600;
+      cursor: pointer; border: none; min-height: 48px;
+      transition: all var(--duration) var(--ease); text-decoration: none;
+    }
+    .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: var(--accent); color: var(--bg-void);
+      box-shadow: 0 0 24px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 40px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.4);
+      transform: translateY(-2px); color: var(--bg-void);
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated); color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-panel); border-color: var(--border-hover);
+      transform: translateY(-2px); color: var(--text-primary);
+    }
+
+    .btn-ghost { background: transparent; color: var(--text-secondary); padding: 12px 16px; }
+    .btn-ghost:hover { color: var(--accent); }
+
+    .install-btn { font-family: var(--font-mono); font-size: 14px; letter-spacing: -0.01em; }
+    .install-btn .copy-icon { opacity: 0.4; transition: opacity var(--duration); }
+    .install-btn:hover .copy-icon { opacity: 0.8; }
+
+    .hero-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 24px; margin-top: 64px; padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 640px) { .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
+
+    .hero-stat { text-align: center; padding: 20px 8px; border-radius: var(--radius-md); transition: background var(--duration); }
+    .hero-stat:hover { background: var(--accent-subtle); }
+
+    .hero-stat-value {
+      font-family: var(--font-display); font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .hero-stat-label {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-muted); font-weight: 500; margin-top: 4px;
+    }
+
+    /* ── Section Divider ── */
+    .section-alt {
+      background: var(--bg-base);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .section-alt::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+      opacity: 0.3;
+    }
+
+    /* ── Problem Cards ── */
+    .problem-header { text-align: center; margin-bottom: 64px; }
+
+    .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 900px) { .problem-grid { grid-template-columns: 1fr; } }
+
+    .problem-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px;
+      position: relative; overflow: hidden;
+      transition: border-color var(--duration), transform var(--duration), box-shadow var(--duration);
+    }
+    .problem-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .problem-card:nth-child(1)::before { background: var(--danger); }
+    .problem-card:nth-child(2)::before { background: var(--warning); }
+    .problem-card:nth-child(3)::before { background: var(--halt); }
+    .problem-card:hover {
+      border-color: var(--border-hover); transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .problem-icon {
+      width: 48px; height: 48px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+    }
+    .problem-card:nth-child(1) .problem-icon { background: rgba(255,59,59,0.1); color: var(--danger); }
+    .problem-card:nth-child(2) .problem-icon { background: rgba(255,184,0,0.1); color: var(--warning); }
+    .problem-card:nth-child(3) .problem-icon { background: rgba(220,38,38,0.1); color: var(--halt); }
+    .problem-icon svg { width: 24px; height: 24px; }
+
+    .problem-card h3 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .problem-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+
+    /* ── Steps ── */
+    .steps-header { text-align: center; margin-bottom: 48px; }
+
+    .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    @media (max-width: 1024px) { .steps-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .steps-grid { grid-template-columns: 1fr; } }
+
+    .step-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px;
+      transition: border-color var(--duration), transform var(--duration), box-shadow var(--duration);
+      position: relative;
+    }
+    .step-card::after {
+      content: ''; position: absolute; inset: 0; border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--accent-subtle), transparent);
+      opacity: 0; transition: opacity var(--duration);
+    }
+    .step-card:hover { border-color: var(--border-hover); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .step-card:hover::after { opacity: 1; }
+
+    .step-number {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: var(--radius-pill);
+      background: var(--accent-subtle); border: 1px solid rgba(0,212,255,0.15);
+      color: var(--accent); font-family: var(--font-mono); font-size: 14px; font-weight: 700;
+      margin-bottom: 20px; position: relative; z-index: 1;
+    }
+
+    .step-card h3 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; position: relative; z-index: 1; }
+    .step-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; position: relative; z-index: 1; }
+
+    /* ── Code Demo ── */
+    .demo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; min-width: 0; }
+    .demo-layout > * { min-width: 0; }
+    @media (max-width: 900px) { .demo-layout { grid-template-columns: 1fr; gap: 32px; } }
+
+    .demo-text h2 {
+      font-family: var(--font-display); font-size: clamp(26px, 3.5vw, 40px);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 16px;
+    }
+    .demo-text p { font-size: 15px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 20px; }
+
+    .provider-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .provider-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
+      background: rgba(255,255,255,0.03); padding: 6px 14px; border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+    }
+    .provider-badge svg { flex-shrink: 0; }
+
+    .code-block {
+      background: var(--bg-code); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      max-width: 100%; min-width: 0;
+    }
+
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+
+    .code-dots { display: flex; gap: 6px; }
+    .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .code-dot:nth-child(1) { background: #ff5f57; }
+    .code-dot:nth-child(2) { background: #febc2e; }
+    .code-dot:nth-child(3) { background: #28c840; }
+
+    .code-filename { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+
+    .code-copy {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      padding: 4px; min-width: 44px; min-height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm); transition: color var(--duration), background var(--duration);
+    }
+    .code-copy:hover { color: var(--accent); background: rgba(255,255,255,0.04); }
+    .code-copy svg { width: 16px; height: 16px; }
+
+    .code-content { padding: 20px 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+    .code-content pre {
+      margin: 0; font-family: var(--font-mono); font-size: 13px;
+      line-height: 1.8; color: var(--text-secondary); white-space: pre; tab-size: 4;
+      max-width: 100%;
+    }
+    @media (max-width: 768px) {
+      .code-content { padding: 14px 12px; }
+      .code-content pre { font-size: 11px; line-height: 1.6; }
+      .install-card { padding: 16px; }
+      .install-card .code-content pre { font-size: 10.5px; }
+      .demo-layout .code-block { max-width: calc(100vw - 32px); }
+    }
+    @media (max-width: 480px) {
+      .code-content pre { font-size: 10px; }
+      .install-card .code-content pre { font-size: 9.5px; }
+    }
+
+    .kw { color: #c084fc; } .fn { color: #60a5fa; } .st { color: #34d399; }
+    .cm { color: #4f5b6e; } .op { color: var(--accent); } .nb { color: #f472b6; }
+    .va { color: #a5b4fc; } .nu { color: var(--warning); }
+
+    /* ── Features ── */
+    .features-header { text-align: center; margin-bottom: 48px; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 1024px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .feature-grid { grid-template-columns: 1fr; } }
+
+    .feature-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px;
+      transition: border-color var(--duration), transform var(--duration), box-shadow var(--duration);
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0; transition: opacity var(--duration);
+    }
+    .feature-card:hover { border-color: var(--border-hover); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md);
+      background: var(--accent-subtle); border: 1px solid rgba(0,212,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px; color: var(--accent);
+    }
+    .feature-icon svg { width: 22px; height: 22px; }
+
+    .feature-card h3 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+
+    /* ── Comparison Table ── */
+    .comparison-header { text-align: center; margin-bottom: 48px; }
+
+    .table-wrap {
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      border-radius: var(--radius-lg); border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+
+    table { width: 100%; border-collapse: collapse; min-width: 640px; }
+    thead { background: rgba(0, 212, 255, 0.03); }
+    th, td { padding: 14px 18px; text-align: center; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th {
+      font-family: var(--font-mono); font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);
+    }
+    th:first-child, td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); padding-left: 24px; }
+    th.highlight-col { color: var(--accent); background: var(--accent-subtle); }
+    td.highlight-col { background: rgba(0, 212, 255, 0.03); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.015); }
+    tr:hover td.highlight-col { background: rgba(0, 212, 255, 0.06); }
+
+    .check { color: var(--success); font-weight: 700; font-family: var(--font-mono); }
+    .cross { color: var(--text-muted); }
+    .partial { color: var(--warning); font-family: var(--font-mono); }
+
+    /* ── Social Proof ── */
+    .social-proof-header { text-align: center; margin-bottom: 40px; }
+
+    .social-proof-quote {
+      max-width: 720px; margin: 0 auto 40px;
+      border-left: 3px solid var(--accent);
+      padding: 24px 32px;
+      background: var(--bg-surface);
+      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      font-size: 16px; line-height: 1.75;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .social-proof-stats {
+      display: flex; justify-content: center; gap: 48px;
+      flex-wrap: wrap;
+    }
+
+    .social-proof-stat {
+      text-align: center;
+    }
+
+    .social-proof-stat .stat-label {
+      font-family: var(--font-mono); font-size: 14px;
+      color: var(--accent); font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .social-proof-stat .stat-value {
+      font-size: 13px; color: var(--text-muted);
+    }
+
+    /* ── Compliance ── */
+    .compliance-header { text-align: center; margin-bottom: 48px; }
+
+    .compliance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 768px) { .compliance-grid { grid-template-columns: 1fr; } }
+
+    .compliance-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px; text-align: center;
+      transition: border-color var(--duration), transform var(--duration);
+    }
+    .compliance-card:hover { border-color: var(--border-hover); transform: translateY(-3px); }
+
+    .compliance-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: var(--radius-lg);
+      background: var(--accent-subtle); border: 1px solid rgba(0,212,255,0.1);
+      margin-bottom: 20px; color: var(--accent);
+    }
+    .compliance-badge svg { width: 28px; height: 28px; }
+
+    .compliance-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .compliance-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+    .compliance-card .ref {
+      display: inline-block; margin-top: 12px;
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+      background: rgba(255,255,255,0.03); padding: 4px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* ── Install ── */
+    .install-header { text-align: center; margin-bottom: 48px; }
+
+    .install-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 900px) { .install-grid { grid-template-columns: 1fr; } }
+
+    .install-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px;
+      transition: border-color var(--duration);
+      min-width: 0; overflow: hidden;
+    }
+    .install-card:hover { border-color: var(--border-hover); }
+
+    .install-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .install-card-header svg { width: 20px; height: 20px; color: var(--accent); flex-shrink: 0; }
+    .install-card-header h3 { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+    .install-card-header .badge {
+      margin-left: auto; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      background: var(--accent-subtle); color: var(--accent); letter-spacing: 0.5px;
+      border: 1px solid rgba(0,212,255,0.12);
+    }
+    .install-card .code-content pre { font-size: 12px; }
+
+    /* ── CTA ── */
+    .cta-section { text-align: center; position: relative; overflow: hidden; }
+    .cta-glow {
+      position: absolute; bottom: -200px; left: 50%; transform: translateX(-50%);
+      width: min(700px, 200vw); height: 700px;
+      background: radial-gradient(ellipse at center, rgba(0, 212, 255, 0.06) 0%, rgba(99, 102, 241, 0.03) 40%, transparent 60%);
+      pointer-events: none;
+    }
+    .cta-section h2 {
+      font-family: var(--font-display); font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800; letter-spacing: -0.03em; margin-bottom: 16px;
+    }
+    .cta-section > .container > p {
+      font-size: 17px; color: var(--text-secondary); margin-bottom: 40px;
+      max-width: 520px; margin-left: auto; margin-right: auto;
+    }
+
+    /* ── Footer ── */
+    .footer { border-top: 1px solid var(--border); padding: 48px 0 32px; }
+
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 24px;
+    }
+    @media (max-width: 768px) {
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    .footer-left { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+    @media (max-width: 640px) { .footer-left { flex-direction: column; align-items: flex-start; gap: 16px; } }
+
+    .footer-brand {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-display); font-size: 15px; font-weight: 700;
+      color: var(--text-primary); letter-spacing: 0.05em;
+    }
+    .footer-brand svg { width: 22px; height: 22px; }
+
+    .footer-links { display: flex; gap: 20px; list-style: none; flex-wrap: wrap; }
+    .footer-links a {
+      font-size: 13px; color: var(--text-muted);
+      transition: color var(--duration);
+    }
+    .footer-links a:hover { color: var(--accent); }
+
+    .footer-right { display: flex; align-items: center; gap: 16px; }
+
+    .lang-switch {
+      display: flex; gap: 2px; background: rgba(255,255,255,0.03);
+      border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-subtle);
+    }
+    .lang-switch a {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      color: var(--text-muted); padding: 6px 14px; cursor: pointer;
+      min-width: 44px; min-height: 32px; transition: all var(--duration);
+    }
+    .lang-switch a.active { background: var(--accent-subtle); color: var(--accent); }
+    .lang-switch a:hover:not(.active) { color: var(--text-secondary); }
+
+    .footer-copy {
+      width: 100%; text-align: center; margin-top: 32px; padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg-panel); color: var(--accent);
+      padding: 10px 24px; border-radius: var(--radius-pill);
+      font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border-hover);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 200; opacity: 0;
+      transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <div class="grid-bg"></div>
+
+  <!-- Navigation -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" aria-label="AEGIS Home">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 2L3 8v12l11 6 11-6V8L14 2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" stroke="currentColor" stroke-width="1.5" fill="rgba(0,212,255,0.15)"/>
+          <circle cx="14" cy="14" r="2" fill="var(--accent)"/>
+        </svg>
+        AEGIS
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#comparison">Compare</a></li>
+        <li><a href="#compliance">Compliance</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="https://github.com/pyonkichi369/aegis-oss" class="nav-cta" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a></li>
+      </ul>
+      <button class="nav-mobile-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero section" id="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-scanline"></div>
+    <div class="container">
+      <div class="fade-in">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          Open Source &middot; Apache 2.0
+        </div>
+      </div>
+      <h1 class="fade-in fade-in-d1">Your AI agents make decisions.<br><span class="gradient-text">Who governs them?</span></h1>
+      <p class="hero-sub fade-in fade-in-d2">Structured boardroom debates, mandatory red team review, and governance guardrails that actually enforce decisions. Not advice. Enforcement.</p>
+      <div class="hero-actions fade-in fade-in-d3">
+        <button class="btn btn-primary install-btn" onclick="copyInstall()" aria-label="Copy install command">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          pip install aegis-gov
+          <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <a href="https://github.com/pyonkichi369/aegis-oss" class="btn btn-secondary" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Star on GitHub
+        </a>
+        <a href="https://github.com/pyonkichi369/aegis-oss#quick-start" class="btn btn-ghost">
+          Read Docs
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </div>
+      <div class="hero-stats fade-in fade-in-d4">
+        <div class="hero-stat"><div class="hero-stat-value">17</div><div class="hero-stat-label">AI Agents</div></div>
+        <div class="hero-stat"><div class="hero-stat-value">6</div><div class="hero-stat-label">Debate Phases</div></div>
+        <div class="hero-stat"><div class="hero-stat-value">5</div><div class="hero-stat-label">Verdict Levels</div></div>
+        <div class="hero-stat"><div class="hero-stat-value">32</div><div class="hero-stat-label">Tests Passing</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="section section-alt" id="problem">
+    <div class="container">
+      <div class="problem-header fade-in">
+        <p class="section-label">The Problem</p>
+        <h2 class="section-title">AI agents are making critical decisions<br>without oversight</h2>
+        <p class="section-subtitle" style="margin: 16px auto 0;">Every multi-agent framework helps AI agents <strong>do things</strong>. None make sure they <strong>should</strong>.</p>
+      </div>
+      <div class="problem-grid">
+        <div class="problem-card fade-in fade-in-d1">
+          <div class="problem-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <h3>No Accountability</h3>
+          <p>Agents execute actions with no record of who decided what, why, or what alternatives were considered. When things go wrong, there is no audit trail.</p>
+        </div>
+        <div class="problem-card fade-in fade-in-d2">
+          <div class="problem-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+          <h3>No Adversarial Review</h3>
+          <p>Groupthink is the default. Without a structured red team to challenge assumptions and stress-test proposals, agents rubber-stamp each other's outputs.</p>
+        </div>
+        <div class="problem-card fade-in fade-in-d3">
+          <div class="problem-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <h3>No Guardrails</h3>
+          <p>Nothing stops an agent from deploying to production at 3am, approving its own code, or spending the entire budget. Policies exist on paper, not in code.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <div class="steps-header fade-in">
+        <p class="section-label">How It Works</p>
+        <h2 class="section-title">Four steps to governed AI</h2>
+        <p class="section-subtitle" style="margin: 16px auto 0;">From unchecked agents to structured, auditable decision-making in minutes.</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card fade-in fade-in-d1"><div class="step-number">1</div><h3>Define Your Agents</h3><p>Configure your council: C-suite executives, domain specialists, and a mandatory red team. Add custom agents for your industry.</p></div>
+        <div class="step-card fade-in fade-in-d2"><div class="step-number">2</div><h3>Convene a Boardroom</h3><p>Submit any decision topic. 17 agents debate across 6 structured phases: opening, executive council, advisory, critical review, open debate, and synthesis.</p></div>
+        <div class="step-card fade-in fade-in-d3"><div class="step-number">3</div><h3>Red Team Challenges</h3><p>DevilsAdvocate and Skeptic stress-test every conclusion. They cannot be disabled. This is non-negotiable adversarial review, built into the core.</p></div>
+        <div class="step-card fade-in fade-in-d4"><div class="step-number">4</div><h3>Rule Engine Enforces</h3><p>5 verdicts: PASS, FLAG, BLOCK, ESCALATE_TO_HUMAN, and HALT. Rules are code, not suggestions. Add custom rules via Python or YAML.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code Demo -->
+  <section class="section section-alt" id="demo">
+    <div class="container">
+      <div class="demo-layout">
+        <div class="demo-text fade-in">
+          <p class="section-label">Quick Start</p>
+          <h2>Five lines to<br><span class="gradient-text">governed decisions</span></h2>
+          <p>Install the package, set your API key, and convene your first boardroom meeting. Every response includes a structured synthesis, vote tally, confidence score, and actionable items.</p>
+          <div class="provider-badges">
+            <span class="provider-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Anthropic</span>
+            <span class="provider-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> OpenAI</span>
+            <span class="provider-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Ollama</span>
+          </div>
+        </div>
+        <div class="fade-in fade-in-d2">
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span></div>
+              <span class="code-filename">quick_start.py</span>
+              <button class="code-copy" onclick="copyCode(this)" aria-label="Copy code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+            </div>
+            <div class="code-content">
+<pre><span class="kw">from</span> <span class="va">aegis_gov</span> <span class="kw">import</span> <span class="fn">Boardroom</span>
+
+<span class="va">boardroom</span> <span class="op">=</span> <span class="fn">Boardroom</span>()
+<span class="va">result</span> <span class="op">=</span> <span class="va">boardroom</span>.<span class="fn">convene</span>(
+    <span class="va">topic</span><span class="op">=</span><span class="st">"Should we deploy the new ML model to production?"</span>,
+    <span class="va">category</span><span class="op">=</span><span class="st">"STRATEGIC"</span>,
+)
+
+<span class="nb">print</span>(<span class="va">result</span>.<span class="va">synthesis</span>)       <span class="cm"># CEO's final decision</span>
+<span class="nb">print</span>(<span class="va">result</span>.<span class="va">vote_summary</span>)    <span class="cm"># {"approve": 7, "conditional": 2, ...}</span>
+<span class="nb">print</span>(<span class="va">result</span>.<span class="va">confidence</span>)      <span class="cm"># 0.85</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="features-header fade-in">
+        <p class="section-label">Features</p>
+        <h2 class="section-title">Everything you need for<br><span class="gradient-text">AI governance</span></h2>
+        <p class="section-subtitle" style="margin: 16px auto 0;">Production-ready governance primitives. Not a toy. Not a demo. Real enforcement.</p>
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card fade-in fade-in-d1">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <h3>6-Phase Boardroom</h3>
+          <p>17 AI agents with distinct roles debate every decision through CEO opening, executive council, advisory input, critical review, open debate, and CEO synthesis.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-d2">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9" y1="12" x2="15" y2="12"/></svg></div>
+          <h3>Mandatory Red Team</h3>
+          <p>DevilsAdvocate challenges assumptions and demands evidence. Skeptic explores alternatives and detects groupthink. Neither can be disabled.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-d3">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+          <h3>Rule Engine</h3>
+          <p>5 built-in governance rules with 5 verdict levels: PASS, FLAG, BLOCK, ESCALATE_TO_HUMAN, HALT. Add custom rules via Python or YAML config.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-d1">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+          <h3>Constitutional Manifesto</h3>
+          <p>Version-controlled governance document defining human sovereignty, decision categories, role separation, and confidence scoring requirements.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-d2">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+          <h3>GitHub Action</h3>
+          <p>Add governance review to pull requests in your CI/CD pipeline. Fail builds on BLOCK verdicts. One YAML file, zero configuration drift.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-d3">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+          <h3>LLM Agnostic</h3>
+          <p>Works with Anthropic Claude, OpenAI GPT, and local models via Ollama. Swap providers with a single parameter. No vendor lock-in.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="section section-alt" id="comparison">
+    <div class="container">
+      <div class="comparison-header fade-in">
+        <p class="section-label">Why AEGIS</p>
+        <h2 class="section-title">The governance layer<br>other frameworks are missing</h2>
+        <p class="section-subtitle" style="margin: 16px auto 0;">AEGIS is not a replacement for task frameworks. It is the governance layer you add on top.</p>
+      </div>
+      <div class="table-wrap fade-in fade-in-d1">
+        <table>
+          <thead><tr>
+            <th>Capability</th><th class="highlight-col">AEGIS</th><th>CrewAI</th><th>AutoGen</th><th>LangGraph</th><th>MetaGPT</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>Governance rule engine</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td></tr>
+            <tr><td>Mandatory red team review</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td></tr>
+            <tr><td>Constitutional manifesto</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td></tr>
+            <tr><td>Decision audit trail</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="partial">Partial</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="partial">Partial</span></td></tr>
+            <tr><td>Verdict enforcement (BLOCK/HALT)</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td><td><span class="cross">No</span></td></tr>
+            <tr><td>Human escalation gates</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="partial">Manual</span></td><td><span class="partial">Manual</span></td><td><span class="partial">Manual</span></td><td><span class="partial">Manual</span></td></tr>
+            <tr><td>LLM-agnostic</td><td class="highlight-col"><span class="check">Yes</span></td><td><span class="check">Yes</span></td><td><span class="check">Yes</span></td><td><span class="check">Yes</span></td><td><span class="cross">No</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Social Proof -->
+  <section class="section" id="social-proof">
+    <div class="container">
+      <div class="social-proof-header fade-in">
+        <p class="section-label">Social Proof</p>
+        <h2 class="section-title">Validated by the best</h2>
+      </div>
+      <blockquote class="social-proof-quote fade-in fade-in-d1">
+        Y Combinator CEO Garry Tan independently built gstack &mdash; 18 AI personas for solo development. AEGIS takes the same approach further with 17 governed agents, mandatory red team, and rule enforcement.
+      </blockquote>
+      <div class="social-proof-stats fade-in fade-in-d2">
+        <div class="social-proof-stat">
+          <div class="stat-label">gstack: 18 personas</div>
+          <div class="stat-value">Garry Tan / Y Combinator</div>
+        </div>
+        <div class="social-proof-stat">
+          <div class="stat-label">AEGIS: 17 governed agents</div>
+          <div class="stat-value">Governance-first framework</div>
+        </div>
+        <div class="social-proof-stat">
+          <div class="stat-label">Same insight</div>
+          <div class="stat-value">AI needs structure</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Compliance -->
+  <section class="section" id="compliance">
+    <div class="container">
+      <div class="compliance-header fade-in">
+        <p class="section-label">Compliance Ready</p>
+        <h2 class="section-title">Built for regulated industries</h2>
+        <p class="section-subtitle" style="margin: 16px auto 0;">Audit trails, decision categorization, and human escalation gates map directly to major AI governance standards.</p>
+      </div>
+      <div class="compliance-grid">
+        <div class="compliance-card fade-in fade-in-d1">
+          <div class="compliance-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg></div>
+          <h3>EU AI Act</h3>
+          <p>Article 14 mandates human oversight of high-risk AI systems. AEGIS provides structured human-in-the-loop escalation gates and full decision audit trails.</p>
+          <span class="ref">Article 14: Human Oversight</span>
+        </div>
+        <div class="compliance-card fade-in fade-in-d2">
+          <div class="compliance-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 16 10"/></svg></div>
+          <h3>NIST AI RMF</h3>
+          <p>The AI Risk Management Framework requires governance mechanisms, risk identification, and continuous monitoring. AEGIS maps to the Govern and Manage functions.</p>
+          <span class="ref">AI RMF 1.0: Govern + Manage</span>
+        </div>
+        <div class="compliance-card fade-in fade-in-d3">
+          <div class="compliance-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <h3>ISO/IEC 42001</h3>
+          <p>AI Management Systems certification requires documented AI policies, risk assessment, and performance evaluation. AEGIS provides the technical implementation layer.</p>
+          <span class="ref">ISO/IEC 42001: AI Management</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section class="section section-alt" id="install">
+    <div class="container">
+      <div class="install-header fade-in">
+        <p class="section-label">Get Started</p>
+        <h2 class="section-title">Install in seconds</h2>
+        <p class="section-subtitle" style="margin: 16px auto 0;">Three ways to add governance to your AI agent system.</p>
+      </div>
+      <div class="install-grid">
+        <div class="install-card fade-in fade-in-d1">
+          <div class="install-card-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <h3>pip</h3><span class="badge">Recommended</span>
+          </div>
+          <div class="code-block"><div class="code-content">
+<pre><span class="cm"># Install with your preferred LLM provider</span>
+<span class="va">pip install</span> aegis-gov[anthropic]
+<span class="va">pip install</span> aegis-gov[openai]
+<span class="va">pip install</span> aegis-gov[all]
+
+<span class="cm"># Generate starter config</span>
+<span class="va">aegis</span> init
+
+<span class="cm"># Run your first review</span>
+<span class="va">aegis</span> convene <span class="st">"Your decision topic"</span></pre>
+          </div></div>
+        </div>
+        <div class="install-card fade-in fade-in-d2">
+          <div class="install-card-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            <h3>Docker</h3>
+          </div>
+          <div class="code-block"><div class="code-content">
+<pre><span class="va">git clone</span> https://github.com/pyonkichi369/aegis-oss.git
+<span class="kw">cd</span> aegis-oss
+<span class="va">cp</span> .env.example .env
+<span class="cm"># Add your ANTHROPIC_API_KEY to .env</span>
+
+<span class="va">docker compose</span> up
+
+<span class="cm"># API at http://localhost:8000/docs</span></pre>
+          </div></div>
+        </div>
+        <div class="install-card fade-in fade-in-d3">
+          <div class="install-card-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94"/></svg>
+            <h3>GitHub Action</h3>
+          </div>
+          <div class="code-block"><div class="code-content">
+<pre><span class="cm"># .github/workflows/aegis-review.yml</span>
+<span class="va">name</span>: AEGIS Governance Review
+<span class="va">on</span>:
+  <span class="va">pull_request</span>:
+    <span class="va">types</span>: [opened, synchronize]
+<span class="va">jobs</span>:
+  <span class="va">review</span>:
+    <span class="va">runs-on</span>: ubuntu-latest
+    <span class="va">steps</span>:
+      - <span class="va">uses</span>: pyonkichi369/aegis-oss@v1
+        <span class="va">with</span>:
+          <span class="va">api-key</span>: ${{ secrets.ANTHROPIC_API_KEY }}
+          <span class="va">category</span>: TACTICAL
+          <span class="va">fail-on</span>: BLOCK</pre>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section section">
+    <div class="cta-glow"></div>
+    <div class="container">
+      <div class="fade-in">
+        <p class="section-label">Open Source</p>
+        <h2><span class="gradient-text">Start governing your AI agents today</span></h2>
+        <p>Apache 2.0 licensed. Production ready. Zero vendor lock-in.</p>
+      </div>
+      <div class="hero-actions fade-in fade-in-d1">
+        <button class="btn btn-primary install-btn" onclick="copyInstall()" aria-label="Copy install command">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          pip install aegis-gov
+          <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <a href="https://github.com/pyonkichi369/aegis-oss" class="btn btn-secondary" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Star on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <span class="footer-brand">
+            <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
+              <path d="M14 2L3 8v12l11 6 11-6V8L14 2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" stroke="currentColor" stroke-width="1.5" fill="rgba(0,212,255,0.15)"/>
+              <circle cx="14" cy="14" r="2" fill="var(--accent)"/>
+            </svg>
+            AEGIS
+          </span>
+          <ul class="footer-links">
+            <li><a href="https://github.com/pyonkichi369/aegis-oss" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://pypi.org/project/aegis-gov/" target="_blank" rel="noopener">PyPI</a></li>
+            <li><a href="https://github.com/pyonkichi369/aegis-oss/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0</a></li>
+            <li><a href="https://github.com/pyonkichi369/aegis-oss/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+            <li><a href="https://x.com/th19930828" target="_blank" rel="noopener">X / Twitter</a></li>
+          </ul>
+        </div>
+        <div class="footer-right">
+          <div class="lang-switch">
+            <a href="index.html" class="active" aria-label="English">EN</a>
+            <a href="ja.html" aria-label="Japanese">JA</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-copy">Built by ZENERA. Governance for the age of autonomous AI.</div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    /* Intersection Observer */
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.querySelectorAll('.fade-in').forEach(function(el) { el.classList.add('visible'); });
+        return;
+      }
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+        });
+      }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+      document.querySelectorAll('.fade-in').forEach(function(el) { observer.observe(el); });
+    })();
+
+    /* Nav scroll effect */
+    (function() {
+      var nav = document.querySelector('.nav');
+      window.addEventListener('scroll', function() {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+      }, { passive: true });
+    })();
+
+    /* Mobile nav */
+    (function() {
+      var toggle = document.getElementById('navToggle');
+      var links = document.getElementById('navLinks');
+      toggle.addEventListener('click', function() {
+        var isOpen = links.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', isOpen);
+      });
+      links.querySelectorAll('a').forEach(function(link) {
+        link.addEventListener('click', function() {
+          links.classList.remove('open');
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    })();
+
+    /* Copy */
+    function showToast(msg) {
+      var toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 2200);
+    }
+    function copyInstall() {
+      navigator.clipboard.writeText('pip install aegis-gov').then(function() {
+        showToast('Copied to clipboard');
+      }).catch(function() { showToast('pip install aegis-gov'); });
+    }
+    function copyCode(btn) {
+      var pre = btn.closest('.code-block').querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        showToast('Code copied');
+      }).catch(function() {});
+    }
+  </script>
+</body>
+</html>
