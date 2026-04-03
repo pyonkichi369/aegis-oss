@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aegis-gov"
-version = "0.1.0"
+version = "0.1.1"
 description = "Governance-first framework for AI agent systems — structured boardroom meetings, rule engine, and mandatory red team review"
 readme = "README.md"
 license = "Apache-2.0"
@@ -34,6 +34,7 @@ dependencies = [
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.40.0"]
 openai = ["openai>=1.0"]
+ollama = ["openai>=1.0"]  # Ollama uses the OpenAI-compatible API
 api = ["fastapi>=0.115.0", "uvicorn>=0.30.0"]
 all = ["aegis-gov[anthropic,openai,api]"]
 dev = [

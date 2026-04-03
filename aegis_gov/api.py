@@ -97,8 +97,8 @@ class BoardroomRequest(BaseModel):
     topic: str
     category: str = "TACTICAL"
     context: dict[str, Any] = {}
-    model: str = "claude-sonnet-4-20250514"
-    provider: str = "anthropic"
+    model: str = "claude-sonnet-4-6"
+    provider: str = "anthropic"  # anthropic | openai | ollama
     synthesis_language: str = "en"
     max_debate_rounds: int = 2
 
@@ -106,8 +106,8 @@ class BoardroomRequest(BaseModel):
 class ReviewRequest(BaseModel):
     artifact: str
     reviewer_tiers: list[str] = ["reviewer", "red_team"]
-    model: str = "claude-sonnet-4-20250514"
-    provider: str = "anthropic"
+    model: str = "claude-sonnet-4-6"
+    provider: str = "anthropic"  # anthropic | openai | ollama
 
 
 class RuleCheckRequest(BaseModel):
@@ -134,8 +134,8 @@ def health():
 @app.post("/api/v1/boardroom", dependencies=[Depends(verify_api_key)])
 def run_boardroom(req: BoardroomRequest):
     """Run a full boardroom meeting with structured agent debate."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+    if not api_key and req.provider != "ollama":
         raise HTTPException(400, "Set ANTHROPIC_API_KEY or OPENAI_API_KEY in environment")
 
     # Sanitize inputs
@@ -178,8 +178,8 @@ async def stream_boardroom(req: BoardroomRequest):
       - complete: final session result
       - error: fatal error
     """
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+    if not api_key and req.provider != "ollama":
         raise HTTPException(400, "Set ANTHROPIC_API_KEY or OPENAI_API_KEY in environment")
 
     # Sanitize inputs
@@ -264,8 +264,8 @@ async def stream_boardroom(req: BoardroomRequest):
 @app.post("/api/v1/review", dependencies=[Depends(verify_api_key)])
 def run_review(req: ReviewRequest):
     """Run a standalone red-team review of an artifact."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+    if not api_key and req.provider != "ollama":
         raise HTTPException(400, "Set ANTHROPIC_API_KEY or OPENAI_API_KEY in environment")
 
     # Sanitize artifact input

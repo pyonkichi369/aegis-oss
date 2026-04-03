@@ -31,6 +31,8 @@ def _color_verdict(v: str) -> str: return _VERDICT_FN.get(v, str)(v)
 
 
 def _get_api_key(provider: str) -> str:
+    if provider == "ollama":
+        return ""  # Ollama doesn't require an API key
     env_var = "OPENAI_API_KEY" if provider == "openai" else "ANTHROPIC_API_KEY"
     key = os.environ.get(env_var, "")
     if not key:
@@ -191,8 +193,8 @@ def cmd_init(args):
         #   3. Run:  aegis convene "your topic" --category TACTICAL
 
         boardroom:
-          provider: anthropic          # anthropic | openai
-          model: claude-sonnet-4-20250514
+          provider: anthropic          # anthropic | openai | ollama
+          model: claude-sonnet-4-6
           max_debate_rounds: 2
           require_red_team: true
           require_human_approval: true
@@ -273,8 +275,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("topic", help="Topic or question to discuss")
     p.add_argument("--category", default="TACTICAL",
                    choices=["STRATEGIC", "TACTICAL", "OPERATIONAL", "CRITICAL"])
-    p.add_argument("--model", default="claude-sonnet-4-20250514")
-    p.add_argument("--provider", default="anthropic", choices=["anthropic", "openai"])
+    p.add_argument("--model", default="claude-sonnet-4-6")
+    p.add_argument("--provider", default="anthropic", choices=["anthropic", "openai", "ollama"])
     p.add_argument("--rounds", type=int, default=2, help="Debate rounds")
     p.add_argument("--output", default="text", choices=["json", "text"])
     p.set_defaults(func=cmd_convene)
@@ -282,8 +284,8 @@ def build_parser() -> argparse.ArgumentParser:
     # review
     p = sub.add_parser("review", help="Run red team review on an artifact")
     p.add_argument("artifact", help="Artifact description to review")
-    p.add_argument("--model", default="claude-sonnet-4-20250514")
-    p.add_argument("--provider", default="anthropic", choices=["anthropic", "openai"])
+    p.add_argument("--model", default="claude-sonnet-4-6")
+    p.add_argument("--provider", default="anthropic", choices=["anthropic", "openai", "ollama"])
     p.set_defaults(func=cmd_review)
 
     # check

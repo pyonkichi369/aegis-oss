@@ -45,8 +45,8 @@ class BoardroomConfig:
     """Configuration for a boardroom session."""
     # LLM settings
     api_key: str = ""
-    model: str = "claude-sonnet-4-20250514"
-    provider: str = "anthropic"  # anthropic | openai
+    model: str = "claude-sonnet-4-6"
+    provider: str = "anthropic"  # anthropic | openai | ollama
     base_url: str | None = None
 
     # Session settings
@@ -100,6 +100,16 @@ class Boardroom:
                 self._client = openai.OpenAI(**kwargs)
             except ImportError:
                 raise ImportError("pip install openai")
+        elif self.config.provider == "ollama":
+            try:
+                import openai
+                # Ollama exposes an OpenAI-compatible API at port 11434
+                self._client = openai.OpenAI(
+                    api_key=self.config.api_key or "ollama",
+                    base_url=self.config.base_url or "http://localhost:11434/v1",
+                )
+            except ImportError:
+                raise ImportError("pip install openai  # Ollama uses OpenAI-compatible API")
         else:
             raise ValueError(f"Unsupported provider: {self.config.provider}")
 
@@ -132,7 +142,7 @@ class Boardroom:
             )
             return response.content[0].text
 
-        elif self.config.provider == "openai":
+        elif self.config.provider in ("openai", "ollama"):
             response = client.chat.completions.create(
                 model=self.config.model,
                 max_tokens=4096,
