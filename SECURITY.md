@@ -23,15 +23,41 @@ If you discover a security vulnerability, please report it responsibly:
 
 ## Scope
 
-The following are in scope:
+The following are **in scope**:
 - `aegis_gov/` — Python governance engine and API
 - Docker configurations
-- Authentication and authorization logic
+- Authentication and authorization logic (`AEGIS_API_KEY`, HMAC comparison)
+- Rule condition evaluation (`eval()` sandbox, AST validation)
+- Input sanitization and prompt injection defenses
 
-The following are out of scope:
+The following are **out of scope**:
 - Third-party dependencies (report upstream)
 - Social engineering
-- Denial of service
+- Denial of service (no rate limiting by design — operators should place a reverse proxy)
+- Vulnerabilities requiring physical access to the host machine
+
+## Rule Condition Security Model
+
+Rule conditions are evaluated via `eval()` with AST pre-validation (`_validate_condition_ast`).
+
+**Blocked constructs:**
+- Dunder attribute access (`.__class__`, `.__mro__`, `.__subclasses__`, etc.)
+- Dunder name references (`__import__`, `__builtins__`, etc.)
+- List/set/dict comprehensions, generator expressions
+- Lambda expressions, function definitions
+- Import statements
+
+**Safe to use in conditions:**
+```python
+# These are allowed
+"context.get('confidence', 1.0) < 0.6"
+"action == 'deploy' and context.get('environment') == 'production'"
+"len(context.get('completed_reviews', [])) < 5"
+```
+
+**Warning:** `RuleEngine(rules_path=...)` should only be used with **trusted YAML files**.
+Never load rule files from untrusted user input. Unsafe conditions are rejected at load time
+with an error log entry — they do not silently execute.
 
 ## Security Best Practices
 
