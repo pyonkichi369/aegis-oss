@@ -24,6 +24,7 @@ Custom rules:
     })
 """
 
+import ast
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -135,6 +136,53 @@ DEFAULT_RULES = {
 # Safe builtins for condition evaluation (no __import__, exec, eval, etc.)
 _SAFE_BUILTINS = {"len": len, "str": str, "int": int, "float": float, "bool": bool, "True": True, "False": False}
 
+# AST node types allowed in condition expressions
+_ALLOWED_AST_NODES = (
+    ast.Expression, ast.BoolOp, ast.BinOp, ast.UnaryOp, ast.Compare,
+    ast.Call, ast.Attribute, ast.Subscript, ast.Name, ast.Constant,
+    ast.List, ast.Dict, ast.Tuple, ast.And, ast.Or, ast.Not,
+    ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
+    ast.In, ast.NotIn, ast.Is, ast.IsNot,
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod, ast.IfExp,
+    # Python 3.9+
+    *(getattr(ast, n) for n in ("Index", "Load", "Store") if hasattr(ast, n)),
+)
+
+
+def _validate_condition_ast(condition: str) -> None:
+    """
+    Validate a rule condition string is safe to eval.
+
+    Blocks:
+    - Dunder attribute access (__class__, __mro__, __subclasses__, etc.)
+    - Import statements
+    - Function definitions / lambda
+    - Walrus operator / comprehensions
+    Raises ValueError if the condition contains disallowed constructs.
+    """
+    try:
+        tree = ast.parse(condition, mode="eval")
+    except SyntaxError as e:
+        raise ValueError(f"Invalid condition syntax: {e}") from e
+
+    for node in ast.walk(tree):
+        # Block any node type not in the allowlist
+        if not isinstance(node, _ALLOWED_AST_NODES):
+            raise ValueError(
+                f"Disallowed construct in condition: {type(node).__name__}. "
+                "Conditions must be simple comparison/boolean expressions."
+            )
+        # Block dunder attribute access (__class__, __mro__, etc.)
+        if isinstance(node, ast.Attribute) and node.attr.startswith("__"):
+            raise ValueError(
+                f"Dunder attribute access disallowed in condition: .{node.attr}"
+            )
+        # Block dunder name references (__import__, __builtins__, etc.)
+        if isinstance(node, ast.Name) and node.id.startswith("__"):
+            raise ValueError(
+                f"Dunder name reference disallowed in condition: {node.id}"
+            )
+
 
 class RuleEngine:
     """
@@ -167,6 +215,13 @@ class RuleEngine:
             if "rules" in custom:
                 for rule in custom["rules"]:
                     rule_id = rule.get("id", rule.get("name", "").lower().replace(" ", "_"))
+                    condition = rule.get("condition")
+                    if condition:
+                        try:
+                            _validate_condition_ast(condition)
+                        except ValueError as e:
+                            logger.error("Skipping rule %s — unsafe condition: %s", rule_id, e)
+                            continue
                     self.rules[rule_id] = rule
             else:
                 self.rules.update(custom)
@@ -177,7 +232,19 @@ class RuleEngine:
     def _evaluate_condition(
         self, condition: str, agent: str, action: str, context: dict[str, Any], rule: dict[str, Any]
     ) -> bool:
-        """Safely evaluate a rule condition expression."""
+        """
+        Safely evaluate a rule condition expression.
+
+        Validates the condition AST before evaluation to block sandbox-escape
+        techniques (dunder attribute traversal, imports, comprehensions, etc.).
+        Falls back to False (safe default) on any error.
+        """
+        try:
+            _validate_condition_ast(condition)
+        except ValueError as e:
+            logger.error("Blocked unsafe rule condition: %s — %s", condition[:80], e)
+            return False
+
         eval_globals = {"__builtins__": _SAFE_BUILTINS}
         eval_locals = {"agent": agent, "action": action, "context": context, "rule": rule}
         try:
@@ -280,10 +347,16 @@ class RuleEngine:
         a Python expression during ``evaluate()``. Available variables:
         ``agent``, ``action``, ``context``, ``rule``.
 
+        Raises ValueError if the condition contains disallowed constructs
+        (dunder access, imports, comprehensions, etc.).
+
         Args:
             rule_id: Unique identifier for the rule
             rule: Rule definition dict with keys: name, condition, verdict, message
         """
+        condition = rule.get("condition")
+        if condition:
+            _validate_condition_ast(condition)  # raises ValueError on unsafe condition
         self.rules[rule_id] = rule
         logger.info("Rule added/updated: %s", rule_id)
 
