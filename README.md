@@ -11,7 +11,7 @@ Structured boardroom debates. Mandatory red team. Governance guardrails that act
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/Tests-32_passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-44_passed-brightgreen.svg)]()
 [![PyPI](https://img.shields.io/badge/PyPI-aegis--gov-orange.svg)](https://pypi.org/project/aegis-gov/)
 
 [Quick Start](#quick-start) · [Why AEGIS?](#why-aegis) · [CLI](#cli) · [GitHub Action](#github-action) · [API](#api) · [Contributing](CONTRIBUTING.md)
@@ -181,8 +181,8 @@ aegis version            Print version
 Options for `convene`:
 ```
 --category    OPERATIONAL | TACTICAL | STRATEGIC | CRITICAL (default: TACTICAL)
---model       LLM model (default: claude-sonnet-4-20250514)
---provider    anthropic | openai (default: anthropic)
+--model       LLM model (default: claude-sonnet-4-6)
+--provider    anthropic | openai | ollama (default: anthropic)
 --rounds      Debate rounds (default: 2)
 --output      json | text (default: text)
 ```
@@ -304,11 +304,10 @@ aegis init --output custom.yaml  # Custom output path
 # OpenAI
 boardroom = Boardroom(BoardroomConfig(provider="openai", model="gpt-4o"))
 
-# Ollama (local)
+# Ollama (local — no API key needed)
 boardroom = Boardroom(BoardroomConfig(
-    provider="openai",
-    base_url="http://localhost:11434/v1",
-    model="llama3",
+    provider="ollama",
+    model="llama3",  # any model installed in Ollama
 ))
 ```
 
@@ -328,7 +327,7 @@ aegis-oss/
 │   └── cli.py                # CLI tool (aegis command)
 ├── action.yml                # GitHub Action definition
 ├── examples/                 # quick_start, custom_agents, rule_engine_demo
-├── tests/                    # 32 tests
+├── tests/                    # 44 tests
 ├── pyproject.toml            # Package config (aegis-gov)
 └── docker/                   # Container setup
 ```
